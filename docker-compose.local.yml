@@ -11,6 +11,8 @@ services:
       POSTGRES_USER: peppermint
       POSTGRES_PASSWORD: 1234
       POSTGRES_DB: peppermint
+    ports:
+      - 5432:5432  # Exposes port 5432 of the container to port 5432 on your host machine
 
   peppermint:
     container_name: peppermint

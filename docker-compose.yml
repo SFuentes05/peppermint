@@ -9,23 +9,25 @@ services:
       - pgdata_live:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: peppermint
-      POSTGRES_PASSWORD: 12345
+      POSTGRES_PASSWORD: 1234
       POSTGRES_DB: peppermint
+    ports:
+      - 5432:5432  # Expose port 5432 to your host machine
 
   peppermint:
     container_name: peppermint
-    image: pepperlabs/peppermint:latest
+    build: "."
     ports:
-      - 1000:3000
-      - 1001:5003
+      - 3000:3000
+      - 5001:5003
     restart: always
     depends_on:
       - peppermint_postgres
     environment:
       DB_USERNAME: "peppermint"
-      DB_PASSWORD: "12345"
+      DB_PASSWORD: "1234"
       DB_HOST: "peppermint_postgres"
       SECRET: 'peppermint4life'
-
-volumes:
- pgdata_live:
+      
+volumes: 
+  pgdata_live:  # This defines the 'pgdata_live' volume
