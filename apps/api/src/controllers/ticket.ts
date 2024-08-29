@@ -1,5 +1,4 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-
 import axios from "axios";
 import { checkToken } from "../lib/jwt";
 
@@ -25,7 +24,6 @@ export function ticketRoutes(fastify: FastifyInstance) {
   // Create a new ticket
   fastify.post(
     "/api/v1/ticket/create",
-
     async (request: FastifyRequest, reply: FastifyReply) => {
       const {
         name,
@@ -36,7 +34,9 @@ export function ticketRoutes(fastify: FastifyInstance) {
         email,
         engineer,
         type,
-        createdBy
+        createdBy,
+        category,
+        equipment,
       }: any = request.body;
 
       const ticket: any = await prisma.ticket.create({
@@ -47,12 +47,16 @@ export function ticketRoutes(fastify: FastifyInstance) {
           priority: priority ? priority : "low",
           email,
           type: type ? type.toLowerCase() : "support",
-          createdBy: createdBy ?  {
-            id: createdBy.id,
-            name: createdBy.name,
-            role: createdBy.role,
-            email: createdBy.email
-          } : undefined,
+          category,
+          equipment,
+          createdBy: createdBy
+            ? {
+                id: createdBy.id,
+                name: createdBy.name,
+                role: createdBy.role,
+                email: createdBy.email,
+              }
+            : undefined,
           client:
             company !== undefined
               ? {
@@ -75,13 +79,13 @@ export function ticketRoutes(fastify: FastifyInstance) {
       }
 
       if (engineer && engineer.name !== "Unassigned") {
-        const assgined = await prisma.user.findUnique({
+        const assigned = await prisma.user.findUnique({
           where: {
             id: ticket.userId,
           },
         });
 
-        await sendAssignedEmail(assgined!.email);
+        await sendAssignedEmail(assigned!.email);
 
         await createNotification("ticket_assigned", engineer.id, ticket);
       }
@@ -142,7 +146,6 @@ export function ticketRoutes(fastify: FastifyInstance) {
   // Get a ticket by id
   fastify.get(
     "/api/v1/ticket/:id",
-
     async (request: FastifyRequest, reply: FastifyReply) => {
       const bearer = request.headers.authorization!.split(" ")[1];
       const token = checkToken(bearer);
@@ -205,7 +208,7 @@ export function ticketRoutes(fastify: FastifyInstance) {
 
         reply.send({
           ticket: t,
-          sucess: true,
+          success: true,
         });
       }
     }
@@ -241,7 +244,7 @@ export function ticketRoutes(fastify: FastifyInstance) {
 
         reply.send({
           tickets: tickets,
-          sucess: true,
+          success: true,
         });
       }
     }
@@ -303,7 +306,7 @@ export function ticketRoutes(fastify: FastifyInstance) {
 
         reply.send({
           tickets: tickets,
-          sucess: true,
+          success: true,
         });
       }
     }
@@ -312,7 +315,6 @@ export function ticketRoutes(fastify: FastifyInstance) {
   // Get all open tickets for a user
   fastify.get(
     "/api/v1/tickets/user/open",
-
     async (request: FastifyRequest, reply: FastifyReply) => {
       const bearer = request.headers.authorization!.split(" ")[1];
       const token = checkToken(bearer);
@@ -337,7 +339,7 @@ export function ticketRoutes(fastify: FastifyInstance) {
 
         reply.send({
           tickets: tickets,
-          sucess: true,
+          success: true,
         });
       }
     }
@@ -346,7 +348,6 @@ export function ticketRoutes(fastify: FastifyInstance) {
   // Get all closed tickets
   fastify.get(
     "/api/v1/tickets/completed",
-
     async (request: FastifyRequest, reply: FastifyReply) => {
       const bearer = request.headers.authorization!.split(" ")[1];
       const token = checkToken(bearer);
@@ -369,7 +370,7 @@ export function ticketRoutes(fastify: FastifyInstance) {
 
         reply.send({
           tickets: tickets,
-          sucess: true,
+          success: true,
         });
       }
     }
@@ -378,7 +379,6 @@ export function ticketRoutes(fastify: FastifyInstance) {
   // Get all unassigned tickets
   fastify.get(
     "/api/v1/tickets/unassigned",
-
     async (request: FastifyRequest, reply: FastifyReply) => {
       const bearer = request.headers.authorization!.split(" ")[1];
       const token = checkToken(bearer);
@@ -403,12 +403,11 @@ export function ticketRoutes(fastify: FastifyInstance) {
   // Update a ticket
   fastify.put(
     "/api/v1/ticket/update",
-
     async (request: FastifyRequest, reply: FastifyReply) => {
       const bearer = request.headers.authorization!.split(" ")[1];
       const token = checkToken(bearer);
 
-      const { id, note, detail, title, priority, status }: any = request.body;
+      const { id, note, detail, title, priority, status, category, equipment }: any = request.body;
 
       if (token) {
         await prisma.ticket.update({
@@ -419,6 +418,8 @@ export function ticketRoutes(fastify: FastifyInstance) {
             title,
             priority,
             status,
+            category,
+            equipment,
           },
         });
 
@@ -432,7 +433,6 @@ export function ticketRoutes(fastify: FastifyInstance) {
   // Transfer a ticket to another user
   fastify.post(
     "/api/v1/ticket/transfer",
-
     async (request: FastifyRequest, reply: FastifyReply) => {
       const bearer = request.headers.authorization!.split(" ")[1];
       const token = checkToken(bearer);
@@ -462,55 +462,9 @@ export function ticketRoutes(fastify: FastifyInstance) {
     }
   );
 
-  // Link a ticket to another ticket
-
-  // fastify.post(
-  //   "/api/v1/ticket/link",
-
-  //   async (request: FastifyRequest, reply: FastifyReply) => {
-  //     const { ticket, id }: any = request.body;
-
-  //     const prev: any = await prisma.ticket.findUnique({
-  //       where: {
-  //         id: id,
-  //       },
-  //     });
-
-  //     const ids = [];
-
-  //     if (prev.length !== undefined && prev.linked.length > 0) {
-  //       ids.push(...prev.linked);
-  //     }
-
-  //     ids.push({
-  //       id: ticket.id,
-  //       title: ticket.title,
-  //     });
-
-  //     const data = await prisma.ticket.update({
-  //       where: {
-  //         id: id,
-  //       },
-  //       data: {
-  //         linked: {
-  //           ...ids,
-  //         },
-  //       },
-  //     });
-  //   }
-  // );
-
-  // Unlink a ticket from another ticket
-  // fastify.post(
-  //   "/api/v1/ticket/unlink",
-
-  //   async (request: FastifyRequest, reply: FastifyReply) => {}
-  // );
-
   // Comment on a ticket
   fastify.post(
     "/api/v1/ticket/comment",
-
     async (request: FastifyRequest, reply: FastifyReply) => {
       const bearer = request.headers.authorization!.split(" ")[1];
       const token = checkToken(bearer);
@@ -559,7 +513,6 @@ export function ticketRoutes(fastify: FastifyInstance) {
   // Update status of a ticket
   fastify.put(
     "/api/v1/ticket/status/update",
-
     async (request: FastifyRequest, reply: FastifyReply) => {
       const bearer = request.headers.authorization!.split(" ")[1];
       const token = checkToken(bearer);
@@ -587,7 +540,7 @@ export function ticketRoutes(fastify: FastifyInstance) {
             const s = status ? "Completed" : "Outstanding";
             if (url.includes("discord.com")) {
               const message = {
-                content: `Ticket ${ticket.id} created by ${ticket.email}, has had it's status changed to ${s}`,
+                content: `Ticket ${ticket.id} created by ${ticket.email}, has had its status changed to ${s}`,
                 avatar_url:
                   "https://avatars.githubusercontent.com/u/76014454?s=200&v=4",
                 username: "Peppermint.sh",
@@ -607,7 +560,7 @@ export function ticketRoutes(fastify: FastifyInstance) {
                   "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                  data: `Ticket ${ticket.id} created by ${ticket.email}, has had it's status changed to ${s}`,
+                  data: `Ticket ${ticket.id} created by ${ticket.email}, has had its status changed to ${s}`,
                 }),
               });
             }
@@ -626,7 +579,6 @@ export function ticketRoutes(fastify: FastifyInstance) {
   // Hide a ticket
   fastify.put(
     "/api/v1/ticket/status/hide",
-
     async (request: FastifyRequest, reply: FastifyReply) => {
       const bearer = request.headers.authorization!.split(" ")[1];
       const token = checkToken(bearer);
@@ -634,16 +586,12 @@ export function ticketRoutes(fastify: FastifyInstance) {
       if (token) {
         const { hidden, id }: any = request.body;
 
-        await prisma.ticket
-          .update({
-            where: { id: id },
-            data: {
-              hidden: hidden,
-            },
-          })
-          .then(async (ticket) => {
-            // await sendTicketStatus(ticket);
-          });
+        await prisma.ticket.update({
+          where: { id: id },
+          data: {
+            hidden: hidden,
+          },
+        });
 
         reply.send({
           success: true,
@@ -652,17 +600,17 @@ export function ticketRoutes(fastify: FastifyInstance) {
     }
   );
 
-  // Get all tickets that created via imap
+  // Get all tickets created via imap (if implemented)
   fastify.get(
     "/api/v1/tickets/imap/all",
-
-    async (request: FastifyRequest, reply: FastifyReply) => {}
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      // Implement this if needed
+    }
   );
 
   // GET all ticket templates
   fastify.get(
     "/api/v1/ticket/templates",
-
     async (request: FastifyRequest, reply: FastifyReply) => {
       const bearer = request.headers.authorization!.split(" ")[1];
       const token = checkToken(bearer);
@@ -688,7 +636,6 @@ export function ticketRoutes(fastify: FastifyInstance) {
   // GET ticket template by ID
   fastify.get(
     "/api/v1/ticket/template/:id",
-
     async (request: FastifyRequest, reply: FastifyReply) => {
       const bearer = request.headers.authorization!.split(" ")[1];
       const token = checkToken(bearer);
@@ -713,13 +660,11 @@ export function ticketRoutes(fastify: FastifyInstance) {
   // PUT ticket template by ID
   fastify.put(
     "/api/v1/ticket/template/:id",
-
     async (request: FastifyRequest, reply: FastifyReply) => {
       const bearer = request.headers.authorization!.split(" ")[1];
       const token = checkToken(bearer);
 
       const { id }: any = request.params;
-
       const { html }: any = request.body;
 
       if (token) {
@@ -742,7 +687,6 @@ export function ticketRoutes(fastify: FastifyInstance) {
   // Get all open tickets for an external user
   fastify.get(
     "/api/v1/tickets/user/open/external",
-
     async (request: FastifyRequest, reply: FastifyReply) => {
       const bearer = request.headers.authorization!.split(" ")[1];
       const token = checkToken(bearer);
@@ -767,7 +711,7 @@ export function ticketRoutes(fastify: FastifyInstance) {
 
         reply.send({
           tickets: tickets,
-          sucess: true,
+          success: true,
         });
       }
     }
@@ -776,7 +720,6 @@ export function ticketRoutes(fastify: FastifyInstance) {
   // Get all closed tickets for an external user
   fastify.get(
     "/api/v1/tickets/user/closed/external",
-
     async (request: FastifyRequest, reply: FastifyReply) => {
       const bearer = request.headers.authorization!.split(" ")[1];
       const token = checkToken(bearer);
@@ -801,7 +744,7 @@ export function ticketRoutes(fastify: FastifyInstance) {
 
         reply.send({
           tickets: tickets,
-          sucess: true,
+          success: true,
         });
       }
     }
@@ -810,7 +753,6 @@ export function ticketRoutes(fastify: FastifyInstance) {
   // Get all tickets for an external user
   fastify.get(
     "/api/v1/tickets/user/external",
-
     async (request: FastifyRequest, reply: FastifyReply) => {
       const bearer = request.headers.authorization!.split(" ")[1];
       const token = checkToken(bearer);
@@ -835,7 +777,7 @@ export function ticketRoutes(fastify: FastifyInstance) {
 
         reply.send({
           tickets: tickets,
-          sucess: true,
+          success: true,
         });
       }
     }

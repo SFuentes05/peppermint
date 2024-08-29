@@ -107,9 +107,11 @@ model Ticket {
   clientId      String?
   userId        String?
 
-
   knowledgeBase knowledgeBase[]
   notifications notifications[]
+
+  category  Category?
+  equipment Equipment?
 }
 
 model TimeTracking {
@@ -370,6 +372,21 @@ enum TicketType {
   maintenance
   access
   feedback
+}
+
+enum Category {
+  Electrico
+  Mecanico
+  Automatizacion
+}
+
+enum Equipment {
+  ST350
+  Caldera
+  GN1
+  Motor
+  Generador
+  ProcesamientoDeBiomasa
 }
 
 enum Template {
